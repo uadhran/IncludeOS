@@ -39,10 +39,28 @@
 
 #include "virtionet.hpp"
 #include <kernel/events.hpp>
-#include <kernel/rng.hpp>
+#include <kernel/cpuid.hpp>
+#include <arch.hpp>
 #include <malloc.h>
 #include <cstring>
 #include <info>
+
+extern "C" void intel_rdrand(uint64_t*);
+extern "C" void intel_rdseed(uint64_t*);
+
+static void randomize_mac_host(uint8_t* host, size_t len, uint16_t pci_addr)
+{
+  uint64_t seed = pci_addr;
+  if (CPUID::has_feature(CPUID::Feature::RDSEED)) {
+    intel_rdseed(&seed);
+  } else if (CPUID::has_feature(CPUID::Feature::RDRAND)) {
+    intel_rdrand(&seed);
+  } else {
+    seed ^= __arch_system_time();
+    seed ^= os::cycles_since_boot();
+  }
+  memcpy(host, &seed, len);
+}
 
 //#define NO_DEFERRED_KICK
 #ifndef NO_DEFERRED_KICK
@@ -180,7 +198,7 @@ VirtioNet::VirtioNet(hw::PCI_Device& d, const uint16_t /*mtu*/)
     uint8_t addr[MAC::Addr::PARTS_LEN];
     memcpy(addr, _conf.mac.part, sizeof(addr));
     addr[0] = (addr[0] & 0xfc) | 0x02;
-    rng_extract(&addr[3], 3);
+    randomize_mac_host(&addr[3], 3, m_pcidev.pci_addr());
     _conf.mac = MAC::Addr(addr[0], addr[1], addr[2],
                           addr[3], addr[4], addr[5]);
   }
