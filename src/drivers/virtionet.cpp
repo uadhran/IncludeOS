@@ -39,6 +39,7 @@
 
 #include "virtionet.hpp"
 #include <kernel/events.hpp>
+#include <kernel/rng.hpp>
 #include <malloc.h>
 #include <cstring>
 #include <info>
@@ -172,6 +173,17 @@ VirtioNet::VirtioNet(hw::PCI_Device& d, const uint16_t /*mtu*/)
   // Step 6 - get the status - demanding this as well.
   // Getting the MAC + status
   get_config();
+
+  // Randomize the host-specific part so multiple local instances
+  // don't end up with the same virtio-net address.
+  {
+    uint8_t addr[MAC::Addr::PARTS_LEN];
+    memcpy(addr, _conf.mac.part, sizeof(addr));
+    addr[0] = (addr[0] & 0xfc) | 0x02;
+    rng_extract(&addr[3], 3);
+    _conf.mac = MAC::Addr(addr[0], addr[1], addr[2],
+                          addr[3], addr[4], addr[5]);
+  }
 
   CHECK(_conf.mac.major > 0, "Valid Mac address: %s",
         _conf.mac.str().c_str());

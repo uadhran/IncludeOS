@@ -90,9 +90,11 @@ namespace hw {
       : pci_addr_{pci_addr}, device_id_{device_id}
   {
     // set master, mem and io flags
-    uint32_t cmd = read32(PCI_CMD_REG);
-    cmd |= PCI_COMMAND_MASTER | PCI_COMMAND_MEM | PCI_COMMAND_IO;
-    write_dword(PCI_CMD_REG, cmd);
+    uint32_t cmd = read32(static_cast<uint8_t>(PCI::config_reg::CMD));
+    cmd |= static_cast<uint32_t>(PCI::command::MASTER)
+        |  static_cast<uint32_t>(PCI::command::MEM)
+        |  static_cast<uint32_t>(PCI::command::IO);
+    write_dword(static_cast<uint8_t>(PCI::config_reg::CMD), cmd);
 
     // device class info is coming from pci manager to save a PCI read
     this->devtype_.reg = devclass;
@@ -167,11 +169,11 @@ namespace hw {
     caps = {};
     // the capability list is only available if bit 4
     // in the status register is set
-    uint16_t status = read16(PCI_STATUS_REG);
+    uint16_t status = read16(static_cast<uint8_t>(PCI::config_reg::STATUS));
     //printf("read16 %#x  status %#x\n", PCI_STATUS_REG, status);
     if ((status & 0x10) == 0) return;
     // this offset works for non-cardbus bridges
-    uint32_t offset = PCI_CAPABILITY_REG;
+    uint32_t offset = static_cast<uint8_t>(PCI::config_reg::CAPABILITY);
     // read first capability
     offset = read16(offset) & 0xff;
     offset &= ~0x3; // lower 2 bits reserved
@@ -189,19 +191,19 @@ namespace hw {
   void PCI_Device::deactivate()
   {
     // disables device (except for configuration)
-    write_dword(PCI_CMD_REG, 0);
+    write_dword(static_cast<uint8_t>(PCI::config_reg::CMD), 0);
   }
 
   void PCI_Device::intx_enable()
   {
-    auto cmd = read16(PCI_CMD_REG);
-    write16(PCI_CMD_REG, cmd & ~(1 << 10));
+    auto cmd = read16(static_cast<uint8_t>(PCI::config_reg::CMD));
+    write16(static_cast<uint8_t>(PCI::config_reg::CMD), cmd & ~(1 << 10));
     // delete msi-x
     if (this->msix) delete this->msix;
   }
   bool PCI_Device::intx_status()
   {
-    auto stat = read16(PCI_STATUS_REG);
+    auto stat = read16(static_cast<uint8_t>(PCI::config_reg::STATUS));
     return stat & (1 << 3);
   }
 
