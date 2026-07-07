@@ -22,33 +22,46 @@
 #include <vector>
 #include <unordered_map>
 
-/* PCI Register Config Space */
-#define PCI_DEV_VEND_REG 0x00	/* for the 32 bit read of dev/vend */
-#define PCI_VENDID_REG   0x00
-#define PCI_DEVID_REG    0x02
-#define PCI_CMD_REG      0x04
-#define PCI_STATUS_REG   0x06
-#define PCI_REVID_REG    0x08
-#define PCI_PROGIF_REG   0x09
-#define PCI_SUBCLASS_REG 0x0a
-#define PCI_CLASS_REG    0x0b
-#define PCI_CLSZ_REG     0x0c
-#define PCI_LATTIM_REG   0x0d
-#define PCI_HEADER_REG   0x0e
-#define PCI_BIST_REG     0x0f
-#define PCI_CAPABILITY_REG 0x34
-
-#define PCI_COMMAND_IO		 0x01
-#define PCI_COMMAND_MEM		 0x02
-#define PCI_COMMAND_MASTER 0x04
-
-#define PCI_CAP_ID_VNDR      0x09
-#define PCI_CAP_ID_AF        0x13	/* PCI Advanced Features */
-#define PCI_CAP_ID_MAX       PCI_CAP_ID_AF
-#define PCI_EXT_CAP_ID_PASID 0x1B	/* Process Address Space ID */
-#define PCI_EXT_CAP_ID_MAX   PCI_EXT_CAP_ID_PASID
-
 namespace PCI {
+
+  /** PCI configuration space register offsets */
+  enum class config_reg : uint8_t {
+    DEV_VEND     = 0x00, /**< 32-bit device/vendor ID */
+    DEVID        = 0x02,
+    CMD          = 0x04,
+    STATUS       = 0x06,
+    REVID        = 0x08,
+    PROGIF       = 0x09,
+    SUBCLASS     = 0x0a,
+    CLASS        = 0x0b,
+    CLSZ         = 0x0c,
+    LATTIM       = 0x0d,
+    HEADER       = 0x0e,
+    BIST         = 0x0f,
+    CAPABILITY   = 0x34
+  };
+
+  /** PCI command register flags */
+  enum class command : uint16_t {
+    IO     = 0x01,
+    MEM    = 0x02,
+    MASTER = 0x04
+  };
+
+  /** Standard PCI capability IDs */
+  enum class cap_id : uint8_t {
+    MSI  = 0x05,
+    VNDR = 0x09,
+    MSIX = 0x11,
+    AF   = 0x13, /**< PCI Advanced Features */
+    MAX  = AF
+  };
+
+  /** Extended PCI capability IDs */
+  enum class ext_cap_id : uint8_t {
+    PASID = 0x1B, /**< Process Address Space ID */
+    MAX   = PASID
+  };
 
   static const uint16_t  CONFIG_ADDR           {0xCF8U};
   static const uint16_t  CONFIG_DATA           {0xCFCU};
@@ -308,7 +321,7 @@ struct msix_t;
     int m_iobase = -1;
     std::array<PCI::Resource, 6> m_resources;
 
-    std::array<pcicap_t, PCI_CAP_ID_MAX+1> caps;
+    std::array<pcicap_t, static_cast<size_t>(PCI::cap_id::MAX)+1> caps;
 
     // has msix support if not null
     msix_t*  msix = nullptr;
