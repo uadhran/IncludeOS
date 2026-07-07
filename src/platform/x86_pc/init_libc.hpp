@@ -4,7 +4,6 @@
 namespace x86
 {
   extern void init_libc(uint32_t magic, uint32_t address);
-  void init_syscall_trap();
 }
 
 extern "C" {

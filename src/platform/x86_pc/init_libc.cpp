@@ -1,6 +1,7 @@
 #include "init_libc.hpp"
 
 #include <arch/x86/cpu.hpp>
+#include <arch/x86/syscall.hpp>
 #include <kernel.hpp>
 #include <kernel/auxvec.h>
 #include <kernel/cpuid.hpp>
@@ -162,17 +163,4 @@ namespace x86
     kernel::state().allow_syscalls = true;
     __libc_start_main(kernel_main, argc, argv.data());
   }
-}
-
-void x86::init_syscall_trap()
-{
-#if defined(PLATFORM_x86_pc) && defined(__x86_64__)
-  uint64_t star_kernel_cs = 8ull << 32;
-  uint64_t star_user_cs   = 8ull << 48;
-  uint64_t star = star_kernel_cs | star_user_cs;
-  x86::CPU::write_msr(IA32_STAR, star);
-  x86::CPU::write_msr(IA32_LSTAR, (uintptr_t)&__syscall_entry);
-#elif defined(PLATFORM_x86_pc) && defined(__i386__)
-  #warning Classical syscall interface missing for 32-bit
-#endif
 }

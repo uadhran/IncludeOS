@@ -3,7 +3,7 @@
 #include "apic_timer.hpp"
 #include "clocks.hpp"
 #include "idt.hpp"
-#include "init_libc.hpp"
+#include <arch/x86/syscall.hpp>
 #include <kernel/events.hpp>
 //#include <kernel/os.hpp>
 #include <os.hpp>
