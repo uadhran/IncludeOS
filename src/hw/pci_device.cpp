@@ -20,8 +20,11 @@
 #include <hw/pci.hpp>
 #include <hw/pci_device.hpp>
 #include <hw/msi.hpp>
+#include <util/bitops.hpp>
 
 namespace hw {
+
+  using namespace util::bitops;
 
   static constexpr std::array<const char*,3> bridge_subclasses {
     "Host",
@@ -90,14 +93,34 @@ namespace hw {
       : pci_addr_{pci_addr}, device_id_{device_id}
   {
     // set master, mem and io flags
-    uint32_t cmd = read32(static_cast<uint8_t>(PCI::config_reg::CMD));
-    cmd |= static_cast<uint32_t>(PCI::command::MASTER)
-        |  static_cast<uint32_t>(PCI::command::MEM)
-        |  static_cast<uint32_t>(PCI::command::IO);
-    write_dword(static_cast<uint8_t>(PCI::config_reg::CMD), cmd);
+    uint32_t cmd = read32(PCI::config_reg::CMD);
+    cmd |= static_cast<uint32_t>(PCI::command::MASTER
+                               | PCI::command::MEM
+                               | PCI::command::IO);
+    write_dword(PCI::config_reg::CMD, cmd);
 
     // device class info is coming from pci manager to save a PCI read
     this->devtype_.reg = devclass;
+  }
+
+  uint32_t PCI_Device::read32(PCI::config_reg reg) noexcept {
+    return read32(static_cast<uint8_t>(reg));
+  }
+
+  uint32_t PCI_Device::read_dword(const uint16_t pci_addr, PCI::config_reg reg) noexcept {
+    return read_dword(pci_addr, static_cast<uint8_t>(reg));
+  }
+
+  void PCI_Device::write_dword(PCI::config_reg reg, const uint32_t value) noexcept {
+    write_dword(static_cast<uint8_t>(reg), value);
+  }
+
+  uint16_t PCI_Device::read16(PCI::config_reg reg) noexcept {
+    return read16(static_cast<uint8_t>(reg));
+  }
+
+  void PCI_Device::write16(PCI::config_reg reg, const uint16_t value) noexcept {
+    write16(static_cast<uint8_t>(reg), value);
   }
 
   uint32_t PCI_Device::read_dword(const uint16_t pci_addr, const uint8_t reg) noexcept {
@@ -169,8 +192,7 @@ namespace hw {
     caps = {};
     // the capability list is only available if bit 4
     // in the status register is set
-    uint16_t status = read16(static_cast<uint8_t>(PCI::config_reg::STATUS));
-    //printf("read16 %#x  status %#x\n", PCI_STATUS_REG, status);
+    uint16_t status = read16(PCI::config_reg::STATUS);
     if ((status & 0x10) == 0) return;
     // this offset works for non-cardbus bridges
     uint32_t offset = static_cast<uint8_t>(PCI::config_reg::CAPABILITY);
@@ -191,19 +213,20 @@ namespace hw {
   void PCI_Device::deactivate()
   {
     // disables device (except for configuration)
-    write_dword(static_cast<uint8_t>(PCI::config_reg::CMD), 0);
+    write_dword(PCI::config_reg::CMD, 0);
   }
 
   void PCI_Device::intx_enable()
   {
-    auto cmd = read16(static_cast<uint8_t>(PCI::config_reg::CMD));
-    write16(static_cast<uint8_t>(PCI::config_reg::CMD), cmd & ~(1 << 10));
+    auto cmd = read16(PCI::config_reg::CMD);
+    write16(PCI::config_reg::CMD,
+            cmd & ~static_cast<uint16_t>(PCI::command::INTX_DISABLE));
     // delete msi-x
     if (this->msix) delete this->msix;
   }
   bool PCI_Device::intx_status()
   {
-    auto stat = read16(static_cast<uint8_t>(PCI::config_reg::STATUS));
+    auto stat = read16(PCI::config_reg::STATUS);
     return stat & (1 << 3);
   }
 
