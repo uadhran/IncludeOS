@@ -190,6 +190,12 @@ struct msix_t;
      */
     explicit PCI_Device(const uint16_t pci_addr, const uint32_t, const uint32_t);
 
+    /**
+     * Config-space accessors.
+     *
+     * Prefer PCI::config_reg overloads (own the HW path). uint8_t overloads
+     * are thin fallbacks for dynamic offsets (BARs, capability chain, etc.).
+     */
     //! @brief Read from device with implicit pci_address (e.g. used by Nic)
     uint32_t read32(PCI::config_reg reg) noexcept;
     uint32_t read32(const uint8_t reg) noexcept;

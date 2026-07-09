@@ -36,9 +36,10 @@ namespace hw
   {
     assert(this->msix == nullptr);
     // disable intx
-    auto cmd = read16(PCI::config_reg::CMD);
-    write16(PCI::config_reg::CMD,
-            cmd | static_cast<uint16_t>(PCI::command::INTX_DISABLE));
+    using namespace util::bitops;
+    auto cmd = static_cast<PCI::command>(read16(PCI::config_reg::CMD));
+    cmd |= PCI::command::INTX_DISABLE;
+    write16(PCI::config_reg::CMD, static_cast<uint16_t>(cmd));
     // enable MSI-X
     this->msix = new msix_t(*this, msix_cap());
     // deallocate if it failed

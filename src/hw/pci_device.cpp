@@ -92,88 +92,91 @@ namespace hw {
                          const uint32_t devclass)
       : pci_addr_{pci_addr}, device_id_{device_id}
   {
-    // set master, mem and io flags
-    uint32_t cmd = read32(PCI::config_reg::CMD);
-    cmd |= static_cast<uint32_t>(PCI::command::MASTER
-                               | PCI::command::MEM
-                               | PCI::command::IO);
-    write_dword(PCI::config_reg::CMD, cmd);
+    // set master, mem and io flags (16-bit command register only)
+    auto cmd = static_cast<PCI::command>(read16(PCI::config_reg::CMD));
+    cmd |= PCI::command::MASTER | PCI::command::MEM | PCI::command::IO;
+    write16(PCI::config_reg::CMD, static_cast<uint16_t>(cmd));
 
     // device class info is coming from pci manager to save a PCI read
     this->devtype_.reg = devclass;
   }
 
+  // Typed config-space accessors own the HW path; cast only at the wire boundary.
   uint32_t PCI_Device::read32(PCI::config_reg reg) noexcept {
-    return read32(static_cast<uint8_t>(reg));
-  }
-
-  uint32_t PCI_Device::read_dword(const uint16_t pci_addr, PCI::config_reg reg) noexcept {
-    return read_dword(pci_addr, static_cast<uint8_t>(reg));
-  }
-
-  void PCI_Device::write_dword(PCI::config_reg reg, const uint32_t value) noexcept {
-    write_dword(static_cast<uint8_t>(reg), value);
-  }
-
-  uint16_t PCI_Device::read16(PCI::config_reg reg) noexcept {
-    return read16(static_cast<uint8_t>(reg));
-  }
-
-  void PCI_Device::write16(PCI::config_reg reg, const uint16_t value) noexcept {
-    write16(static_cast<uint8_t>(reg), value);
-  }
-
-  uint32_t PCI_Device::read_dword(const uint16_t pci_addr, const uint8_t reg) noexcept {
-    PCI::msg req;
-
-    req.data = 0x80000000;
-    req.addr = pci_addr;
-    req.reg  = reg;
-
-    outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
-    return inpd(PCI::CONFIG_DATA);
-  }
-  void PCI_Device::write_dword(const uint8_t reg, const uint32_t value) noexcept {
     PCI::msg req;
 
     req.data = 0x80000000;
     req.addr = pci_addr_;
-    req.reg  = reg;
+    req.reg  = static_cast<uint8_t>(reg);
+
+    outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
+    return inpd(PCI::CONFIG_DATA);
+  }
+
+  uint32_t PCI_Device::read_dword(const uint16_t pci_addr, PCI::config_reg reg) noexcept {
+    PCI::msg req;
+
+    req.data = 0x80000000;
+    req.addr = pci_addr;
+    req.reg  = static_cast<uint8_t>(reg);
+
+    outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
+    return inpd(PCI::CONFIG_DATA);
+  }
+
+  void PCI_Device::write_dword(PCI::config_reg reg, const uint32_t value) noexcept {
+    PCI::msg req;
+
+    req.data = 0x80000000;
+    req.addr = pci_addr_;
+    req.reg  = static_cast<uint8_t>(reg);
 
     outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
     outpd(PCI::CONFIG_DATA, value);
   }
 
-  uint32_t PCI_Device::read32(const uint8_t reg) noexcept {
-    PCI::msg req;
-
-    req.data = 0x80000000;
-    req.addr = pci_addr_;
-    req.reg  = reg;
-
-    outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
-    return inpd(PCI::CONFIG_DATA);
-  }
-
   __attribute__((noinline))
-  uint16_t PCI_Device::read16(const uint8_t reg) noexcept {
+  uint16_t PCI_Device::read16(PCI::config_reg reg) noexcept {
+    const auto off = static_cast<uint8_t>(reg);
     PCI::msg req;
     req.data = 0x80000000;
     req.addr = pci_addr_;
-    req.reg  = reg;
+    req.reg  = off;
 
     outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
-    uint16_t data = inpw(PCI::CONFIG_DATA + (reg & 2));
-    return data;
+    return inpw(PCI::CONFIG_DATA + (off & 2));
   }
-  void PCI_Device::write16(const uint8_t reg, const uint16_t value) noexcept {
+
+  void PCI_Device::write16(PCI::config_reg reg, const uint16_t value) noexcept {
+    const auto off = static_cast<uint8_t>(reg);
     PCI::msg req;
     req.data = 0x80000000;
     req.addr = pci_addr_;
-    req.reg  = reg;
+    req.reg  = off;
 
     outpd(PCI::CONFIG_ADDR, 0x80000000 | req.data);
-    outpw(PCI::CONFIG_DATA + (reg & 2), value);
+    outpw(PCI::CONFIG_DATA + (off & 2), value);
+  }
+
+  // Raw-offset fallbacks for dynamic addresses (BARs, capability chain, CONFIG_INTR).
+  uint32_t PCI_Device::read_dword(const uint16_t pci_addr, const uint8_t reg) noexcept {
+    return read_dword(pci_addr, static_cast<PCI::config_reg>(reg));
+  }
+
+  void PCI_Device::write_dword(const uint8_t reg, const uint32_t value) noexcept {
+    write_dword(static_cast<PCI::config_reg>(reg), value);
+  }
+
+  uint32_t PCI_Device::read32(const uint8_t reg) noexcept {
+    return read32(static_cast<PCI::config_reg>(reg));
+  }
+
+  uint16_t PCI_Device::read16(const uint8_t reg) noexcept {
+    return read16(static_cast<PCI::config_reg>(reg));
+  }
+
+  void PCI_Device::write16(const uint8_t reg, const uint16_t value) noexcept {
+    write16(static_cast<PCI::config_reg>(reg), value);
   }
 
   union capability_t
@@ -195,9 +198,7 @@ namespace hw {
     uint16_t status = read16(PCI::config_reg::STATUS);
     if ((status & 0x10) == 0) return;
     // this offset works for non-cardbus bridges
-    uint32_t offset = static_cast<uint8_t>(PCI::config_reg::CAPABILITY);
-    // read first capability
-    offset = read16(offset) & 0xff;
+    uint32_t offset = read16(PCI::config_reg::CAPABILITY) & 0xff;
     offset &= ~0x3; // lower 2 bits reserved
 
     while (offset) {
@@ -218,9 +219,9 @@ namespace hw {
 
   void PCI_Device::intx_enable()
   {
-    auto cmd = read16(PCI::config_reg::CMD);
-    write16(PCI::config_reg::CMD,
-            cmd & ~static_cast<uint16_t>(PCI::command::INTX_DISABLE));
+    auto cmd = static_cast<PCI::command>(read16(PCI::config_reg::CMD));
+    cmd &= ~PCI::command::INTX_DISABLE;
+    write16(PCI::config_reg::CMD, static_cast<uint16_t>(cmd));
     // delete msi-x
     if (this->msix) delete this->msix;
   }
