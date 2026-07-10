@@ -181,11 +181,7 @@ void kernel::multiboot(uint32_t boot_addr)
   if (info->flags & MULTIBOOT_INFO_CMDLINE) {
     const auto* cmdline = (const char*) (uintptr_t) info->cmdline;
     INFO2("* Booted with parameters @ {}: {}", (const void*)(uintptr_t)info->cmdline, cmdline);
-    // Multiboot cmdline lives in bootloader-provided memory for the lifetime of
-    // the kernel. _multiboot_free_begin() reserves it when it sits past _end
-    // (and low-memory cmdlines are outside the free region). Do not copy into a
-    // temporary and store .data() — that dangles (see issue #2368 / #2273).
-    // Also avoid strdup/malloc here: early boot must not call into libc (#2252).
+    // Bootloader memory (_multiboot_free_begin); no temp .data()/strdup.
     kernel::state().cmdline = cmdline;
   }
 
