@@ -25,50 +25,36 @@
 
 namespace PCI {
 
-  /**
-   * PCI configuration space register offsets.
-   *
-   * Names follow IncludeOS PCI_* macros; see Linux include/linux/pci_regs.h
-   * (PCI_COMMAND, PCI_CACHE_LINE_SIZE, PCI_CAPABILITY_LIST, etc.) and the
-   * PCI Local Bus Specification: https://www.pcisig.com/specifications
-   */
+  // Names/values match Linux include/linux/pci_regs.h (PCI Local Bus Spec).
   enum class config_reg : uint8_t {
-    DEV_VEND   = 0x00, /**< PCI_VENDOR_ID — 32-bit device/vendor ID */
-    DEVID      = 0x02, /**< PCI_DEVICE_ID */
-    CMD        = 0x04, /**< PCI_COMMAND */
-    STATUS     = 0x06, /**< PCI_STATUS */
-    REVID      = 0x08, /**< PCI_REVISION_ID */
-    PROGIF     = 0x09, /**< PCI_CLASS_PROG */
-    SUBCLASS   = 0x0a, /**< PCI_CLASS_DEVICE */
-    CLASS      = 0x0b, /**< Class code byte */
-    CLSZ       = 0x0c, /**< PCI_CACHE_LINE_SIZE */
-    LATTIM     = 0x0d, /**< PCI_LATENCY_TIMER */
-    HEADER     = 0x0e, /**< PCI_HEADER_TYPE */
-    BIST       = 0x0f, /**< PCI_BIST */
-    CAPABILITY = 0x34  /**< PCI_CAPABILITY_LIST */
+    DEV_VEND   = 0x00,
+    DEVID      = 0x02,
+    CMD        = 0x04,
+    STATUS     = 0x06,
+    REVID      = 0x08,
+    PROGIF     = 0x09,
+    SUBCLASS   = 0x0a,
+    CLASS      = 0x0b,
+    CLSZ       = 0x0c,
+    LATTIM     = 0x0d,
+    HEADER     = 0x0e,
+    BIST       = 0x0f,
+    CAPABILITY = 0x34
   };
 
-  /** PCI command register flags (PCI_COMMAND_*) */
   enum class command : uint16_t {
-    IO           = 0x01,   /**< PCI_COMMAND_IO */
-    MEM          = 0x02,   /**< PCI_COMMAND_MEMORY */
-    MASTER       = 0x04,   /**< PCI_COMMAND_MASTER */
-    INTX_DISABLE = 0x400,  /**< PCI_COMMAND_INTX_DISABLE */
+    IO           = 0x01,
+    MEM          = 0x02,
+    MASTER       = 0x04,
+    INTX_DISABLE = 0x400,
   };
 
-  /** Standard PCI capability IDs (PCI_CAP_ID_*) */
   enum class cap_id : uint8_t {
-    MSI  = 0x05, /**< PCI_CAP_ID_MSI — Message Signalled Interrupts */
-    VNDR = 0x09, /**< PCI_CAP_ID_VNDR — Vendor-specific */
-    MSIX = 0x11, /**< PCI_CAP_ID_MSIX — MSI-X */
-    AF   = 0x13, /**< PCI_CAP_ID_AF — PCI Advanced Features */
+    MSI  = 0x05,
+    VNDR = 0x09,
+    MSIX = 0x11,
+    AF   = 0x13,
     MAX  = AF
-  };
-
-  /** Extended PCI capability IDs */
-  enum class ext_cap_id : uint8_t {
-    PASID = 0x1B, /**< Process Address Space ID */
-    MAX   = PASID
   };
 
   static const uint16_t  CONFIG_ADDR           {0xCF8U};
@@ -190,12 +176,7 @@ struct msix_t;
      */
     explicit PCI_Device(const uint16_t pci_addr, const uint32_t, const uint32_t);
 
-    /**
-     * Config-space accessors.
-     *
-     * Prefer PCI::config_reg overloads (own the HW path). uint8_t overloads
-     * are thin fallbacks for dynamic offsets (BARs, capability chain, etc.).
-     */
+    // config_reg overloads own the HW path; uint8_t is for dynamic offsets.
     //! @brief Read from device with implicit pci_address (e.g. used by Nic)
     uint32_t read32(PCI::config_reg reg) noexcept;
     uint32_t read32(const uint8_t reg) noexcept;
